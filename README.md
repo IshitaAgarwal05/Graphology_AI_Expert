@@ -59,8 +59,8 @@ Graphology_AI_Expert/
 
 ```bash
 # 1) Clone the repository  
-git clone https://github.com/your-username/handwriting-graphology.git
-cd handwriting-graphology
+git clone [https://IshitaAgarwal05/Graphology_AI_Expert.git](https://github.com/IshitaAgarwal05/Graphology_AI_Expert.git)
+cd Graphology_AI_Expert
 
 # 2) Create venv (recommended)
 python -m venv .venv
