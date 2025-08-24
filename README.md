@@ -73,7 +73,12 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### [Graphology AI Expert Working Link](https://graphology-ai-expert-ia.streamlit.app/).
+### Graphology AI Expert Working Demo
+[Website](https://graphology-ai-expert-ia.streamlit.app/)
+<br><br>
+![Img_1](assets/1.png)
+![Img_2](assets/2.png)
+![Img_3](assets/3.png)
 
 ## Notes
 - The "pressure" metric uses **average stroke width** as a proxy, which depends on image resolution. Try to upload similar DPI scans for fair comparisons.
