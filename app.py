@@ -1,10 +1,11 @@
-
 import json
 import io
 import numpy as np
 import cv2
 import streamlit as st
 from PIL import Image
+from rules import get_all_rules
+
 from utils.image_processing import (
     load_image_cv, binarize, deskew, estimate_xheight, components_from_bw,
     median_slant_deg, baseline_slope_deg, median_word_gap, avg_stroke_width_estimate,
@@ -33,70 +34,90 @@ with st.sidebar:
     st.markdown("---")
     st.write("Made with ❤️ in Streamlit")
 
-col1, col2 = st.columns([1,1])
+tabs = st.tabs(["Upload & Analyze", "Graphology Rules"])
 
-if up is None:
-    st.info("Upload a handwriting image to begin.")
-    st.stop()
+# --- Upload & Analyze Tab ---
+with tabs[0]:
+    col1, col2 = st.columns([1,1])
 
-# Read
-img = load_image_cv(up)
-orig_vis = img.copy()
+    if up is None:
+        st.info("Upload a handwriting image to begin.")
+        st.stop()
 
-# Binarize
-bw, used_inversion = binarize(img, auto_invert=invert, blur=blur)
+    # Read
+    img = load_image_cv(up)
+    orig_vis = img.copy()
 
-# Deskew
-angle_deg = 0.0
-if do_deskew:
-    bw, angle_deg = deskew(bw)
+    # Binarize
+    bw, used_inversion = binarize(img, auto_invert=invert, blur=blur)
 
-# Compute components
-comps = components_from_bw(bw)
+    # Deskew
+    angle_deg = 0.0
+    if do_deskew:
+        bw, angle_deg = deskew(bw)
 
-# Objective features
-xheight = estimate_xheight(comps)
-slant_deg = median_slant_deg(comps)
-baseline_deg = baseline_slope_deg(bw, step=sample_step)
-gap_med, gaps = median_word_gap(bw)
-if gap_norm_by == "x-height (median char height)":
-    gap_norm = (gap_med / max(1.0, xheight)) if gap_med is not None and xheight not in (None, 0) else None
-else:
-    gap_norm = (gap_med / bw.shape[1]) if gap_med is not None else None
+    # Compute components
+    comps = components_from_bw(bw)
 
-stroke_w = avg_stroke_width_estimate(bw)
-loop_frac = loop_ratio(bw)
-margins = margins_pixels(bw)
+    # Objective features
+    xheight = estimate_xheight(comps)
+    slant_deg = median_slant_deg(comps)
+    baseline_deg = baseline_slope_deg(bw, step=sample_step)
+    gap_med, gaps = median_word_gap(bw)
+    if gap_norm_by == "x-height (median char height)":
+        gap_norm = (gap_med / max(1.0, xheight)) if gap_med is not None and xheight not in (None, 0) else None
+    else:
+        gap_norm = (gap_med / bw.shape[1]) if gap_med is not None else None
 
-features = {
-    "deskew_angle_deg": float(angle_deg),
-    "median_slant_deg": None if slant_deg is None else float(slant_deg),
-    "baseline_slope_deg": float(baseline_deg),
-    "xheight_px": None if xheight is None else float(xheight),
-    "median_word_gap_px": None if gap_med is None else float(gap_med),
-    "normalized_word_gap": None if gap_norm is None else float(gap_norm),
-    "avg_stroke_width_px": float(stroke_w),
-    "loop_ratio": float(loop_frac),
-    "margins_px": {k:int(v) for k,v in margins.items()},
-    "image_size": {"h": int(bw.shape[0]), "w": int(bw.shape[1])}
-}
+    stroke_w = avg_stroke_width_estimate(bw)
+    loop_frac = loop_ratio(bw)
+    margins = margins_pixels(bw)
 
-# Interpret
-interpretation = interpret_traits(features)
+    features = {
+        "deskew_angle_deg": float(angle_deg),
+        "median_slant_deg": None if slant_deg is None else float(slant_deg),
+        "baseline_slope_deg": float(baseline_deg),
+        "xheight_px": None if xheight is None else float(xheight),
+        "median_word_gap_px": None if gap_med is None else float(gap_med),
+        "normalized_word_gap": None if gap_norm is None else float(gap_norm),
+        "avg_stroke_width_px": float(stroke_w),
+        "loop_ratio": float(loop_frac),
+        "margins_px": {k:int(v) for k,v in margins.items()},
+        "image_size": {"h": int(bw.shape[0]), "w": int(bw.shape[1])}
+    }
 
-with col1:
-    st.subheader("Input & Binarized View")
-    st.image(cv2.cvtColor(orig_vis, cv2.COLOR_BGR2RGB), caption="Original", use_column_width=True)
-    st.image(bw, caption=f"Binarized (deskew angle: {angle_deg:.2f}°)", use_column_width=True, clamp=True)
+    # Interpret
+    interpretation = interpret_traits(features)
 
-with col2:
-    st.subheader("Extracted Features")
-    st.json(features)
-    st.subheader("Graphology-style Interpretation")
-    st.write(interpretation)
+    with col1:
+        st.subheader("Input & Binarized View")
+        st.image(cv2.cvtColor(orig_vis, cv2.COLOR_BGR2RGB), caption="Original", use_column_width=True)
+        st.image(bw, caption=f"Binarized (deskew angle: {angle_deg:.2f}°)", use_column_width=True, clamp=True)
 
-# Download JSON
-buf = io.BytesIO()
-buf.write(json.dumps({"features": features, "interpretation": interpretation}, indent=2).encode("utf-8"))
-buf.seek(0)
-st.download_button("⬇️ Download results (JSON)", data=buf, file_name="handwriting_traits.json", mime="application/json")
+    with col2:
+        st.subheader("Extracted Features")
+        st.json(features)
+        st.subheader("Graphology-style Interpretation")
+        st.write(interpretation)
+
+    # Download JSON
+    buf = io.BytesIO()
+    buf.write(json.dumps({"features": features, "interpretation": interpretation}, indent=2).encode("utf-8"))
+    buf.seek(0)
+    st.download_button("⬇️ Download results (JSON)", data=buf, file_name="handwriting_traits.json", mime="application/json")
+
+
+# --- Graphology Rules Tab ---
+with tabs[1]:
+    st.header("Graphology Rules")
+    rules = get_all_rules()
+
+    option = st.selectbox("Select a rule to view explanation:", ["Show All"] + list(rules.keys()))
+
+    if option == "Show All":
+        for rule, desc in rules.items():
+            st.subheader(rule)
+            st.write(desc)
+    else:
+        st.subheader(option)
+        st.write(rules[option])
