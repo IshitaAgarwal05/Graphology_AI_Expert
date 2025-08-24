@@ -40,7 +40,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Then open the URL Streamlit prints (usually http://localhost:8501).
+### [Graphology AI Expert Working Link](https://graphology-ai-expert-ia.streamlit.app/).
 
 ## Notes
 - The "pressure" metric uses **average stroke width** as a proxy, which depends on image resolution. Try to upload similar DPI scans for fair comparisons.
